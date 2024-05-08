@@ -1,20 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Cocona;
-using MoreLinq;
 namespace TaskManager
 {
 	internal class Program
 	{
 		public static Tasks Data;
+		private static ListCommand _listCommand;
+
+		public static ConsoleColor DefaultColor;
 
 		public static void Main(string[] args)
 		{
+			DefaultColor = Console.ForegroundColor;
 			LoadData();
-
+			InitCommands();
 			CoconaApp.Run<Program>(args);
 		}
+		private static void InitCommands()
+		{
+
+			_listCommand = new ListCommand();
+		}
+
 		private static void LoadData()
 		{
 
@@ -29,42 +37,21 @@ namespace TaskManager
 		{
 			"l"
 		})]
-		public void List([Option] string date = "empty")
+		public void List([Argument] string date = "empty", [Option('a')] bool all = false)
 		{
-			if (Data.AllTasks.Count > 0)
+			if (all)
 			{
-				if (string.IsNullOrEmpty(date) || date == "empty")
+				_listCommand.OutputAllTasks();
+			}
+			else if (Data.AllTasks.Count > 0)
+			{
+				if (_listCommand.ShouldDisplayAllTaskCount(date))
 				{
-					Console.WriteLine($"Tasks: {Data.AllTasks.Count}");
-					IEnumerable<Task> tasks = Data.AllTasks.DistinctBy(FormatDate);
-
-					foreach (Task task in tasks)
-					{
-						string formatDate = FormatDate(task);
-						Console.WriteLine($"{Data.AllTasks.CountBy(t => FormatDate(t) == formatDate).Count()}: {formatDate}");
-					}
+					_listCommand.OutputTaskCountAndDates();
 				}
 				else
 				{
-					if (date.ToLower() is ("current" or "today" or "now"))
-					{
-						date = FormatDate(DateTime.Now);
-					}
-
-					IEnumerable<Task> filtered = Data.AllTasks.Where(d => FormatDate(d) == date);
-
-					if (filtered.Any())
-					{
-						Console.WriteLine($"Tasks: {filtered.Count()}");
-						foreach (Task task in filtered)
-						{
-							Console.WriteLine($"\t{task.Date}\t{task.Message}");
-						}
-					}
-					else
-					{
-						Console.WriteLine($"No tasks found for {date}");
-					}
+					_listCommand.OutputSpecifiedDate(date);
 				}
 			}
 			else
@@ -72,16 +59,7 @@ namespace TaskManager
 				Console.WriteLine($"No tasks added");
 			}
 		}
-		private static string FormatDate(Task t)
-		{
 
-			return FormatDate(t.GetDate());
-		}
-		private static string FormatDate(DateTime t)
-		{
-
-			return $"{t.Day:00}.{t.Month:00}.{t.Year:0000}";
-		}
 
 		[Command]
 		public void Add([Argument] string message)
